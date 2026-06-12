@@ -101,6 +101,27 @@ input[type=text]:focus{border-color:var(--acc)}
 #banner{font-weight:700;font-size:clamp(14px,2.4vw,17px);min-height:24px;text-align:center;color:var(--ink)}
 #cv{touch-action:none;cursor:crosshair;max-width:min(94vw,76vh);max-height:min(94vw,76vh);width:100%;height:auto}
 #gameBtns{display:flex;gap:10px}
+/* ---- mode select ---- */
+.modeRow{display:flex;align-items:center;gap:8px;padding:12px 16px;background:#fff}
+.modeLb{font-size:10px;letter-spacing:.18em;color:var(--mut);font-weight:700;margin-right:auto}
+.modeBtn{cursor:pointer;font:inherit;font-size:12px;font-weight:700;padding:7px 14px;border:1px solid var(--line2);background:#fff;color:var(--ink)}
+.modeBtn.sel{background:var(--ink);color:#fff}
+/* ---- game layout + chat ---- */
+#gameWrap{display:flex;gap:14px;align-items:stretch;justify-content:center;width:min(98vw,1220px)}
+#gameMain{display:flex;flex-direction:column;align-items:center;gap:8px;flex:1;min-width:0}
+#chatPanel{width:252px;flex:none;border:1px solid var(--line2);display:flex;flex-direction:column;background:#fff;max-height:min(94vw,82vh)}
+#chatHead{font-size:11px;font-weight:700;letter-spacing:.2em;padding:10px 14px;border-bottom:1px solid var(--line2)}
+#chatLog{flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:6px;min-height:120px}
+.cmsg{font-size:12.5px;line-height:1.45;word-break:break-word}
+.cmsg b{margin-right:6px}
+.cmsg.sys{color:var(--mut);font-size:11.5px}
+#chatRow{display:flex;border-top:1px solid var(--line2)}
+#chatRow input{border:none;font-size:13px;padding:10px 12px;flex:1;font-weight:400}
+#chatRow .btn{width:64px;border-left:1px solid var(--line2);justify-content:center}
+@media (max-width:980px){
+  #gameWrap{flex-direction:column;align-items:center}
+  #chatPanel{width:min(94vw,520px);max-height:190px}
+}
 /* ---- overlay ---- */
 #overlay{display:none;position:fixed;inset:0;background:rgba(255,255,255,.96);
   z-index:50;align-items:center;justify-content:center;flex-direction:column;gap:20px}
@@ -124,12 +145,13 @@ input[type=text]:focus{border-color:var(--acc)}
   <div class="home">
     <div class="homeL">
       <h1>알까기<br><em>아레나</em></h1>
-      <p class="desc">4인이 2:2로 맞붙는 팀전 알까기. 내 돌을 당겨 쏘아 상대 팀의 돌을 모두 판 밖으로 떨어뜨리면 승리합니다. 같은 편 돌은 서로 통과하므로 아군 돌을 방패로 쓰는 수비 전략이 가능합니다.</p>
+      <p class="desc">4인이 2:2로 맞붙는 팀전 알까기. 내 돌을 당겨 쏘아 상대 팀의 돌을 모두 판 밖으로 떨어뜨리면 승리합니다. 모든 돌이 서로 부딪히는 리얼 물리 — 한 방에 여러 개를 떨어뜨리는 더블킬도, 아군을 밀어 버리는 팀킬도 나옵니다.</p>
       <ul class="spec">
         <li><b>PLAYERS</b><span>4인 — 흑백팀(검정·하양) 대 적청팀(빨강·파랑)</span></li>
-        <li><b>STONES</b><span>1인당 5알, 팀당 10알</span></li>
+        <li><b>STONES</b><span>클래식 5알 · 어려움 7알 (1인 기준)</span></li>
         <li><b>TURN</b><span>검정, 빨강, 하양, 파랑 순서의 팀 교대 턴제</span></li>
-        <li><b>ONLINE</b><span>방 생성 후 6자리 코드로 입장, 빈 자리는 AI로 채우기</span></li>
+        <li><b>HARD</b><span>넓은 맵 · 작은 돌 · 중앙 쿠션 장애물 · 포켓 함정</span></li>
+        <li><b>ONLINE</b><span>방 생성 후 6자리 코드로 입장, 빈 자리는 AI로 채우기 · 채팅 지원</span></li>
       </ul>
     </div>
     <div class="homeR">
@@ -138,6 +160,7 @@ input[type=text]:focus{border-color:var(--acc)}
         <input type="text" id="inName" maxlength="10" placeholder="닉네임을 입력하세요">
       </div>
       <div class="actions">
+        <div class="modeRow"><span class="modeLb">MODE</span><button class="modeBtn sel" id="modeClassic">클래식</button><button class="modeBtn" id="modeHard">어려움</button></div>
         <button class="btn" id="btnSolo">혼자 연습 — AI 3인과 대전</button>
         <button class="btn ghost" id="btnHost">방 만들기 — 친구 초대</button>
         <div class="joinRow">
@@ -161,6 +184,7 @@ input[type=text]:focus{border-color:var(--acc)}
     <b id="codeTxt">------</b>
     <button class="btn small" id="btnCopy">복사</button>
   </div>
+  <div class="hint" id="modeInfo"></div>
   <div id="seatGrid">
     <div class="teamCol"><div class="teamLabel t0">흑백팀 — BLACK &amp; WHITE</div><div id="seatT0"></div></div>
     <div class="teamCol"><div class="teamLabel t1">적청팀 — RED &amp; BLUE</div><div id="seatT1"></div></div>
@@ -174,10 +198,19 @@ input[type=text]:focus{border-color:var(--acc)}
 
 <!-- ======== 게임 ======== -->
 <div class="screen" id="scrGame">
-  <div id="hud"></div>
-  <div id="banner"></div>
-  <canvas id="cv" width="900" height="900"></canvas>
-  <div id="gameBtns"><button class="btn small" id="btnLeaveGame">나가기</button></div>
+  <div id="gameWrap">
+    <div id="gameMain">
+      <div id="hud"></div>
+      <div id="banner"></div>
+      <canvas id="cv" width="900" height="900"></canvas>
+      <div id="gameBtns"><button class="btn small" id="btnLeaveGame">나가기</button></div>
+    </div>
+    <div id="chatPanel">
+      <div id="chatHead">CHAT</div>
+      <div id="chatLog"></div>
+      <div id="chatRow"><input id="chatIn" maxlength="120" placeholder="메시지 입력" autocomplete="off"><button class="btn small" id="chatSend">전송</button></div>
+    </div>
+  </div>
 </div>
 
 <!-- ======== 결과 ======== -->
@@ -207,8 +240,14 @@ function show(id){document.querySelectorAll('.screen').forEach(e=>e.classList.re
 
 /* ---------------- 상수 ---------------- */
 const CW=900,CH=900;
-const B={x:84,y:84,w:732,h:732};            // 보드 영역
-const R=17;                                   // 돌 반지름
+const MODES={
+  classic:{label:'클래식',B:{x:84,y:84,w:732,h:732},R:17,count:5,off:[-180,-90,0,90,180],inset:78,cushions:[],pockets:[]},
+  hard:{label:'어려움',B:{x:40,y:40,w:820,h:820},R:13,count:7,off:[-216,-144,-72,0,72,144,216],inset:64,
+    cushions:[{x:395,y:395,w:110,h:110},{x:225,y:439,w:90,h:22},{x:585,y:439,w:90,h:22}],
+    pockets:[{x:265,y:265,r:24},{x:635,y:265,r:24},{x:265,y:635,r:24},{x:635,y:635,r:24}]}
+};
+let MODE='classic',selMode='classic';
+let B=MODES.classic.B, R=MODES.classic.R;   // 보드 영역 / 돌 반지름 (모드에 따라 변경)
 const FRICTION=0.955, STOP=8, REST=0.88, MAXV=1600;
 const LAMBDA=-Math.log(FRICTION)*60;          // 거리당 감속(≈2.76/s) → 최대사거리 ≈ 580px
 const MAXPULL=170, PULLPOW=9.4;
@@ -258,19 +297,40 @@ addEventListener('pointerdown',()=>sfx.unlock(),{once:true});
 
 /* ---------------- 돌 초기화 ---------------- */
 function initStones(){
-  const st=[],c=B.x+B.w/2,off=[-180,-90,0,90,180],inset=78;
-  for(let s=0;s<4;s++)for(let i=0;i<5;i++){
+  const M=MODES[MODE],st=[],c=B.x+B.w/2,off=M.off,inset=M.inset;
+  for(let s=0;s<4;s++)for(let i=0;i<M.count;i++){
     let x,y;
     if(s===0){x=c+off[i];y=B.y+B.h-inset;}
     else if(s===2){x=c+off[i];y=B.y+inset;}
     else if(s===1){x=B.x+B.w-inset;y=c+off[i];}
     else{x=B.x+inset;y=c+off[i];}
-    st.push({x,y,tx:x,ty:y,vx:0,vy:0,seat:s,team:SEATS[s].team,alive:true,falling:false,fall:0,sc:1});
+    st.push({x,y,tx:x,ty:y,vx:0,vy:0,seat:s,team:SEATS[s].team,alive:true,falling:false,fall:0,sc:1,pocket:null});
   }
   return st;
 }
 
 /* ---------------- 물리 엔진 ---------------- */
+function bounceRect(s,rc){
+  const cx=clamp(s.x,rc.x,rc.x+rc.w),cy=clamp(s.y,rc.y,rc.y+rc.h);
+  let dx=s.x-cx,dy=s.y-cy,d2=dx*dx+dy*dy;
+  if(d2>=R*R)return;
+  let nx,ny;
+  if(d2<1e-9){  // 중심이 사각형 내부 → 가장 얕은 면으로 밀어냄
+    const l=s.x-rc.x,r=rc.x+rc.w-s.x,t=s.y-rc.y,b=rc.y+rc.h-s.y,m=Math.min(l,r,t,b);
+    nx=m===l?-1:m===r?1:0;ny=nx!==0?0:(m===t?-1:1);
+    if(nx!==0)s.x=(nx<0?rc.x:rc.x+rc.w)+nx*(R+0.5);
+    else s.y=(ny<0?rc.y:rc.y+rc.h)+ny*(R+0.5);
+  }else{
+    const d=Math.sqrt(d2);nx=dx/d;ny=dy/d;
+    s.x=cx+nx*(R+0.5);s.y=cy+ny*(R+0.5);
+  }
+  const vn=s.vx*nx+s.vy*ny;
+  if(vn<0){
+    s.vx-=1.85*vn*nx;s.vy-=1.85*vn*ny;   // 반발계수 0.85
+    const imp=Math.abs(vn);
+    if(imp>40){sfx.clack(imp);fxQ.push(['clack',Math.round(imp)]);spawnSparks(s.x-nx*R,s.y-ny*R,imp);}
+  }
+}
 function physStep(dt){
   // 적응형 서브스텝: 두 돌의 상대 이동량이 한 스텝에 R*0.8을 넘지 않도록 → 터널링(통과) 방지
   let vmax=0;
@@ -281,7 +341,9 @@ function physStep(dt){
     for(const s of G.stones){
       if(!s.alive)continue;
       if(s.falling){
-        s.x+=s.vx*h;s.y+=s.vy*h;s.fall+=h;s.sc=Math.max(0,1-s.fall*2.1);
+        if(s.pocket){const k=Math.min(1,h*14);s.x+=(s.pocket.x-s.x)*k;s.y+=(s.pocket.y-s.y)*k;s.vx*=.7;s.vy*=.7;}
+        else{s.x+=s.vx*h;s.y+=s.vy*h;}
+        s.fall+=h;s.sc=Math.max(0,1-s.fall*2.1);
         if(s.fall>0.55){s.alive=false;}
         moving=true;continue;
       }
@@ -292,13 +354,22 @@ function physStep(dt){
         if(s.x<B.x||s.x>B.x+B.w||s.y<B.y||s.y>B.y+B.h){
           s.falling=true;s.fall=0;moving=true;fxQ.push(['fall']);sfx.fall();
         }
+        if(!s.falling){
+          const M=MODES[MODE];
+          for(const rc of M.cushions)bounceRect(s,rc);
+          for(const pk of M.pockets){
+            if(Math.hypot(s.x-pk.x,s.y-pk.y)<pk.r-3){
+              s.falling=true;s.pocket=pk;s.fall=0;moving=true;fxQ.push(['fall']);sfx.fall();break;
+            }
+          }
+        }
       }
     }
     for(let i=0;i<G.stones.length;i++){
       const a=G.stones[i];if(!a.alive||a.falling)continue;
       for(let j=i+1;j<G.stones.length;j++){
         const b=G.stones[j];if(!b.alive||b.falling)continue;
-        if(a.team===b.team)continue;            // 같은 편 돌은 통과 (방어벽 전략)
+        // 모든 돌이 충돌 — 더블킬·팀킬 가능 (리얼 물리)
         let dx=b.x-a.x,dy=b.y-a.y,d2=dx*dx+dy*dy;const min=R*2;
         if(d2<min*min&&d2>1e-6){
           const d=Math.sqrt(d2),nx=dx/d,ny=dy/d,ov=(min-d)/2;
@@ -351,6 +422,11 @@ function exitDist(x,y,nx,ny){
   if(ny>1e-9)t=Math.min(t,(B.y+B.h-y)/ny);else if(ny<-1e-9)t=Math.min(t,(B.y-y)/ny);
   return t===1e9?B.w:t;
 }
+function segDist(px,py,ax,ay,bx,by){
+  const dx=bx-ax,dy=by-ay,L2=dx*dx+dy*dy||1;
+  let t=((px-ax)*dx+(py-ay)*dy)/L2;t=clamp(t,0,1);
+  return Math.hypot(px-(ax+dx*t),py-(ay+dy*t));
+}
 function maybeAI(){
   if(!isAuthority()||G.phase!=='aim')return;
   const seat=room.seats[G.turn];
@@ -368,7 +444,12 @@ function aiPlay(seat){
       const nx=dx/d,ny=dy/d;
       const ex=exitDist(f.x,f.y,nx,ny);                 // 맞은 뒤 가장자리까지 거리
       const em=Math.min(f.x-B.x,B.x+B.w-f.x,f.y-B.y,B.y+B.h-f.y); // 가장자리 근접
-      const score=700-ex*1.25-d*0.35+(360-em)*0.45+rand(0,70);
+      let block=0;
+      for(const fr of G.stones)
+        if(fr.alive&&!fr.falling&&fr!==o&&fr!==f&&fr.team===SEATS[seat].team&&segDist(fr.x,fr.y,o.x,o.y,f.x,f.y)<R*2)block+=130;  // 아군이 길막
+      for(const pk of MODES[MODE].pockets)
+        if(segDist(pk.x,pk.y,o.x,o.y,f.x,f.y)<pk.r+R)block+=160;                       // 경로상 함정
+      const score=700-ex*1.25-d*0.35+(360-em)*0.45-block+rand(0,70);
       if(!best||score>best.score)best={o,f,nx,ny,d,ex,score};
     }
     const v0=clamp(LAMBDA*(best.d+best.ex*1.25+110)*rand(0.93,1.08),380,MAXV);
@@ -391,8 +472,9 @@ function stepSparks(dt){
 /* ---------------- 렌더링 ---------------- */
 const cv=$('#cv'),ctx=cv.getContext('2d');
 const boardCv=document.createElement('canvas');boardCv.width=CW;boardCv.height=CH;
-(function drawBoard(){
+function drawBoardCache(){
   const c=boardCv.getContext('2d');
+  c.clearRect(0,0,CW,CH);
   // 배경은 투명 — 페이지 흰색이 그대로 보임
   // 보드 그림자
   c.save();c.shadowColor='rgba(0,0,0,.22)';c.shadowBlur=36;c.shadowOffsetY=14;
@@ -431,7 +513,24 @@ const boardCv=document.createElement('canvas');boardCv.width=CW;boardCv.height=C
   vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,.14)');
   c.save();rr(c,B.x-26,B.y-26,B.w+52,B.h+52,26);c.clip();
   c.fillStyle=vg;c.fillRect(0,0,CW,CH);c.restore();
-})();
+  // 쿠션 장애물 & 포켓 함정 (어려움 모드)
+  const M=MODES[MODE];
+  for(const rc of M.cushions){
+    c.save();c.shadowColor='rgba(0,0,0,.4)';c.shadowBlur=10;c.shadowOffsetY=5;
+    c.fillStyle='#6d4517';c.fillRect(rc.x,rc.y,rc.w,rc.h);c.restore();
+    c.fillStyle='#8d5e26';c.fillRect(rc.x+3,rc.y+3,rc.w-6,rc.h-6);
+    c.strokeStyle='rgba(255,230,180,.45)';c.lineWidth=1.5;c.strokeRect(rc.x+.5,rc.y+.5,rc.w-1,rc.h-1);
+  }
+  for(const pk of M.pockets){
+    c.fillStyle='rgba(0,0,0,.28)';c.beginPath();c.arc(pk.x,pk.y+2,pk.r+3,0,7);c.fill();
+    const g2=c.createRadialGradient(pk.x,pk.y,2,pk.x,pk.y,pk.r);
+    g2.addColorStop(0,'#000');g2.addColorStop(.75,'#170d03');g2.addColorStop(1,'#3a2410');
+    c.fillStyle=g2;c.beginPath();c.arc(pk.x,pk.y,pk.r,0,7);c.fill();
+    c.strokeStyle='rgba(255,225,170,.4)';c.lineWidth=2;c.beginPath();c.arc(pk.x,pk.y,pk.r,0,7);c.stroke();
+  }
+}
+drawBoardCache();
+function applyMode(m){MODE=MODES[m]?m:'classic';B=MODES[MODE].B;R=MODES[MODE].R;drawBoardCache();}
 function rr(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath();}
 
 function drawStone(s,t){
@@ -511,12 +610,12 @@ function updateHUD(){
   for(const o of order){
     if(o==='vs'){const v=document.createElement('span');v.className='vs';v.textContent='VS';hud.appendChild(v);continue;}
     const seat=room.seats[o]||{name:'-'};
-    const cnt=G.stones.length?G.stones.filter(s=>s.alive&&!s.falling&&s.seat===o).length:5;
+    const cnt=G.stones.length?G.stones.filter(s=>s.alive&&!s.falling&&s.seat===o).length:MODES[MODE].count;
     const chip=document.createElement('div');
     chip.className='chip'+(G.phase==='aim'&&G.turn===o?' turn':'')+(cnt===0?' dead':'');
     chip.innerHTML=`<span class="dot" style="background:radial-gradient(circle at 32% 30%,${SEATS[o].c2},${SEATS[o].c1})"></span>
       <span class="cn">${esc(seat.name||'-')}${o===net.mySeat?' (나)':''}</span>
-      <span class="pips">${Array.from({length:5},(_,i)=>`<span class="pip${i<cnt?'':' off'}"></span>`).join('')}</span>`;
+      <span class="pips">${Array.from({length:MODES[MODE].count},(_,i)=>`<span class="pip${i<cnt?'':' off'}"></span>`).join('')}</span>`;
     hud.appendChild(chip);
   }
 }
@@ -535,6 +634,7 @@ function showWin(){
   $('#winSub').textContent=w===myTeam?'승리했습니다. 멋진 한 수!':'아쉽게 패배했습니다. 한 판 더?';
   $('#btnRematch').style.display=isAuthority()?'':'none';
   w===myTeam?sfx.win():sfx.lose();
+  addChat(-1,'',TEAMS[w].name+' 승리!',true);
   setTimeout(()=>$('#overlay').classList.add('on'),700);
   updateHUD();
 }
@@ -599,6 +699,30 @@ function loop(){
 }
 requestAnimationFrame(loop);
 
+/* ---------------- 채팅 ---------------- */
+const CHAT_COL=['#111111','#d63a2f','#8a8a8a','#2f6fe4'];
+function addChat(seat,name,msg,sys){
+  const log=$('#chatLog');if(!log)return;
+  const d=document.createElement('div');
+  d.className='cmsg'+(sys?' sys':'');
+  if(sys)d.textContent=msg;
+  else d.innerHTML=`<b style="color:${CHAT_COL[seat]||'#111'}">${esc(name)}</b>${esc(msg)}`;
+  log.appendChild(d);
+  while(log.children.length>200)log.removeChild(log.firstChild);
+  log.scrollTop=log.scrollHeight;   // 항상 최신 메시지가 하단에
+}
+function sysChat(m){addChat(-1,'',m,true);if(net.mode==='online'&&net.isHost)bc({t:'chat',sys:1,m});}
+function sendChat(){
+  const inp=$('#chatIn'),m=inp.value.trim();
+  if(!m)return;inp.value='';
+  if(net.mode==='online'&&!net.isHost){
+    if(net.host&&net.host.open)net.host.send({t:'chat',m});
+  }else{
+    addChat(net.mySeat,myName(),m);
+    if(net.mode==='online')bc({t:'chat',seat:net.mySeat,name:myName(),m});
+  }
+}
+
 /* ================================================================
    네트워크 (PeerJS) — 호스트 권한 방식
    ================================================================ */
@@ -618,7 +742,7 @@ function sendState(){
 function sendRoom(){
   if(net.mode!=='online'||!net.isHost)return;
   for(const c of net.conns)if(c.open&&c._seat!==undefined)
-    c.send({t:'room',seats:publicSeats(),you:c._seat,code:net.code});
+    c.send({t:'room',seats:publicSeats(),you:c._seat,code:net.code,mode:selMode});
   renderLobby();
 }
 
@@ -650,6 +774,12 @@ function hostOnData(conn,d){
     if(i<0){conn.send({t:'full'});return;}
     room.seats[i]={type:'human',name:String(d.name||'게스트').slice(0,10),conn};
     conn._seat=i;sendRoom();toast(room.seats[i].name+' 입장');sfx.click();
+    sysChat(room.seats[i].name+'님이 입장했습니다');
+  }else if(d.t==='chat'){
+    const i2=conn._seat;if(i2===undefined)return;
+    const m=String(d.m||'').slice(0,120);if(!m)return;
+    const nm=(room.seats[i2]&&room.seats[i2].name)||SEATS[i2].label;
+    addChat(i2,nm,m);bc({t:'chat',seat:i2,name:nm,m});
   }else if(d.t==='shot'){
     if(G.phase==='aim'&&conn._seat===G.turn&&typeof d.si==='number')
       fireShot(d.si|0,+d.vx||0,+d.vy||0);
@@ -663,6 +793,7 @@ function hostDrop(conn){
   else{
     room.seats[i]={type:'ai',name:'AI·'+(room.seats[i].name||'')};
     sendRoom();toast(SEATS[i].label+' 자리가 AI로 전환되었습니다');
+    sysChat(SEATS[i].label+' 자리가 AI로 전환되었습니다');
     updateHUD();maybeAI();
   }
 }
@@ -689,14 +820,16 @@ function joinRoom(code){
 function clientOnData(d){
   if(!d||typeof d!=='object')return;
   switch(d.t){
-    case 'room':room.seats=d.seats;net.mySeat=d.you;net.code=d.code;showLobbyScreen();break;
+    case 'room':room.seats=d.seats;net.mySeat=d.you;net.code=d.code;selMode=d.mode||'classic';showLobbyScreen();break;
     case 'full':toast('방이 가득 찼거나 게임이 시작되었습니다');backToMenu();break;
     case 'start':
       room.seats=d.seats;started=true;winShown=false;drag=null;sparks=[];
+      applyMode(d.mode||'classic');
       G={phase:'aim',stones:initStones(),turn:0,winner:-1,shotSeat:0};
       $('#overlay').classList.remove('on');
       show('#scrGame');updateHUD();banner();break;
     case 'state':applyState(d);break;
+    case 'chat':if(d.sys)addChat(-1,'',d.m,true);else addChat(d.seat,d.name,d.m);break;
   }
 }
 function applyState(d){
@@ -749,16 +882,19 @@ function renderLobby(){
   const full=room.seats.length===4&&room.seats.every(s=>s.type!=='open');
   $('#btnStart').disabled=!net.isHost||!full;
   $('#btnStart').style.display=net.isHost?'':'none';
+  const mi=$('#modeInfo');
+  if(mi)mi.textContent='모드: '+MODES[selMode].label+(selMode==='hard'?' — 넓은 맵 · 돌 7개 · 쿠션 장애물 · 포켓 함정':' — 표준 규칙 · 돌 5개');
   $('#lobbyHint').innerHTML=net.isHost
     ?(full?'모든 자리가 찼습니다. <b>게임 시작</b>을 누르세요':'친구에게 코드를 공유하거나, 빈 자리를 <b>AI로 채우세요</b>')
     :'호스트가 게임을 시작하길 기다리는 중...';
 }
 function startGame(){
   if(!isAuthority())return;
+  applyMode(selMode);
   started=true;winShown=false;drag=null;sparks=[];fxQ.length=0;
   G={phase:'aim',stones:initStones(),turn:0,winner:-1,shotSeat:0};
   $('#overlay').classList.remove('on');
-  if(net.mode==='online'){bc({t:'start',seats:publicSeats()});sendState();}
+  if(net.mode==='online'){bc({t:'start',seats:publicSeats(),mode:MODE});sendState();}
   show('#scrGame');updateHUD();banner();maybeAI();
 }
 function backToMenu(){
@@ -767,6 +903,7 @@ function backToMenu(){
   net={mode:'local',isHost:true,peer:null,conns:[],host:null,code:'',mySeat:0};
   room={seats:[]};G={phase:'menu',stones:[],turn:0,winner:-1,shotSeat:0};
   $('#overlay').classList.remove('on');
+  const cl=$('#chatLog');if(cl)cl.innerHTML='';
   show('#scrMenu');
 }
 
@@ -795,6 +932,10 @@ $('#btnLeaveLobby').onclick=()=>{sfx.click();backToMenu();};
 $('#btnLeaveGame').onclick=()=>{sfx.click();if(confirm('게임에서 나갈까요?'))backToMenu();};
 $('#btnToMenu').onclick=()=>{sfx.click();backToMenu();};
 $('#btnRematch').onclick=()=>{sfx.click();startGame();};
+$('#modeClassic').onclick=()=>{selMode='classic';$('#modeClassic').classList.add('sel');$('#modeHard').classList.remove('sel');sfx.click();};
+$('#modeHard').onclick=()=>{selMode='hard';$('#modeHard').classList.add('sel');$('#modeClassic').classList.remove('sel');sfx.click();};
+$('#chatSend').onclick=()=>sendChat();
+$('#chatIn').addEventListener('keydown',e=>{if(e.key==='Enter')sendChat();});
 </script>
 </body>
 </html>
