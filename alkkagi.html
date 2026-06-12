@@ -157,9 +157,9 @@ input[type=text]:focus{border-color:var(--acc)}
 <div class="screen" id="scrLobby">
   <div class="kicker">WAITING ROOM</div>
   <div class="codeBox" id="codeBox" style="display:none">
-    <span style="font-size:12px;color:var(--dim)">초대 코드</span>
+    <span>초대 코드</span>
     <b id="codeTxt">------</b>
-    <button class="btn ghost small" id="btnCopy">복사</button>
+    <button class="btn small" id="btnCopy">복사</button>
   </div>
   <div id="seatGrid">
     <div class="teamCol"><div class="teamLabel t0">흑백팀 — BLACK &amp; WHITE</div><div id="seatT0"></div></div>
@@ -167,7 +167,7 @@ input[type=text]:focus{border-color:var(--acc)}
   </div>
   <div class="hint" id="lobbyHint"></div>
   <div class="row" style="width:min(92vw,400px)">
-    <button class="btn ghost" id="btnLeaveLobby">나가기</button>
+    <button class="btn ghost" id="btnLeaveLobby" style="border:1px solid #111">나가기</button>
     <button class="btn" id="btnStart" disabled>게임 시작</button>
   </div>
 </div>
@@ -177,7 +177,7 @@ input[type=text]:focus{border-color:var(--acc)}
   <div id="hud"></div>
   <div id="banner"></div>
   <canvas id="cv" width="900" height="900"></canvas>
-  <div id="gameBtns"><button class="btn ghost small" id="btnLeaveGame">나가기</button></div>
+  <div id="gameBtns"><button class="btn small" id="btnLeaveGame">나가기</button></div>
 </div>
 
 <!-- ======== 결과 ======== -->
@@ -186,13 +186,12 @@ input[type=text]:focus{border-color:var(--acc)}
   <div id="winTxt"></div>
   <div id="winSub"></div>
   <div class="row" style="width:min(80vw,360px)">
-    <button class="btn ghost" id="btnToMenu">메뉴로</button>
-    <button class="btn" id="btnRematch">한 판 더!</button>
+    <button class="btn ghost" id="btnToMenu" style="border:1px solid #111">메뉴로</button>
+    <button class="btn" id="btnRematch">한 판 더</button>
   </div>
 </div>
 
 <div id="toast"></div>
-
 <script>
 'use strict';
 /* ================================================================
@@ -220,7 +219,7 @@ const SEATS=[
   {label:'파랑',c1:'#2f6fe4',c2:'#8fb3ff',team:1,txt:'#a8c4ff'},
 ];
 const TEAMS=[{name:'흑백팀',col:'#111111'},{name:'적청팀',col:'#d63a2f'}];
-const BOT_NAMES=['봇·아리','봇·두리','봇·세찌'];
+const BOT_NAMES=['봇아리','봇두리','봇세찌'];
 
 /* ---------------- 전역 상태 ---------------- */
 let G={phase:'menu',stones:[],turn:0,winner:-1,shotSeat:0};
@@ -369,7 +368,6 @@ function aiPlay(seat){
       const nx=dx/d,ny=dy/d;
       const ex=exitDist(f.x,f.y,nx,ny);                 // 맞은 뒤 가장자리까지 거리
       const em=Math.min(f.x-B.x,B.x+B.w-f.x,f.y-B.y,B.y+B.h-f.y); // 가장자리 근접
-      // 적이 먼저 막고 있으면(다른 적이 경로상에) 그 적을 맞춰도 이득이므로 무시
       const score=700-ex*1.25-d*0.35+(360-em)*0.45+rand(0,70);
       if(!best||score>best.score)best={o,f,nx,ny,d,ex,score};
     }
@@ -476,7 +474,7 @@ function drawAim(){
   const cap=Math.min(pull,MAXPULL),nx=dx/pull,ny=dy/pull;
   const pow=cap/MAXPULL;
   // 당김 줄
-  ctx.strokeStyle='rgba(255,255,255,.22)';ctx.lineWidth=2;ctx.setLineDash([4,6]);
+  ctx.strokeStyle='rgba(0,0,0,.25)';ctx.lineWidth=2;ctx.setLineDash([4,6]);
   ctx.beginPath();ctx.moveTo(s.x,s.y);ctx.lineTo(s.x-nx*cap,s.y-ny*cap);ctx.stroke();ctx.setLineDash([]);
   // 발사 예측선
   const len=60+pow*240;
@@ -533,7 +531,7 @@ function banner(){
 function showWin(){
   if(winShown)return;winShown=true;
   const w=G.winner,myTeam=SEATS[net.mySeat].team;
-  $('#winTxt').innerHTML=`<span style="color:${TEAMS[w].col}">${TEAMS[w].name} 승리!</span>`;
+  $('#winTxt').innerHTML=`<span style="color:${TEAMS[w].col}">${TEAMS[w].name} 승리</span>`;
   $('#winSub').textContent=w===myTeam?'승리했습니다. 멋진 한 수!':'아쉽게 패배했습니다. 한 판 더?';
   $('#btnRematch').style.display=isAuthority()?'':'none';
   w===myTeam?sfx.win():sfx.lose();
@@ -583,7 +581,6 @@ function loop(){
       const moving=physStep(dt);
       if(net.mode==='online'&&t-lastSend>40){lastSend=t;sendState();}
       if(!moving){
-        // 모든 낙하 애니메이션 종료 확인
         const anyFall=G.stones.some(s=>s.alive&&s.falling);
         if(!anyFall){updateHUD();settle();}
       }
@@ -652,7 +649,7 @@ function hostOnData(conn,d){
     const i=room.seats.findIndex(s=>s.type==='open');
     if(i<0){conn.send({t:'full'});return;}
     room.seats[i]={type:'human',name:String(d.name||'게스트').slice(0,10),conn};
-    conn._seat=i;sendRoom();toast(`${room.seats[i].name} 입장!`);sfx.click();
+    conn._seat=i;sendRoom();toast(room.seats[i].name+' 입장');sfx.click();
   }else if(d.t==='shot'){
     if(G.phase==='aim'&&conn._seat===G.turn&&typeof d.si==='number')
       fireShot(d.si|0,+d.vx||0,+d.vy||0);
@@ -665,7 +662,7 @@ function hostDrop(conn){
   if(!started){room.seats[i]={type:'open'};sendRoom();toast('플레이어가 나갔습니다');}
   else{
     room.seats[i]={type:'ai',name:'AI·'+(room.seats[i].name||'')};
-    sendRoom();toast(`${SEATS[i].label} 자리가 AI로 전환되었습니다`);
+    sendRoom();toast(SEATS[i].label+' 자리가 AI로 전환되었습니다');
     updateHUD();maybeAI();
   }
 }
@@ -742,7 +739,7 @@ function renderLobby(){
       <div class="role">${SEATS[i].label} · ${role}</div></span>`;
     if(net.isHost&&!started&&i!==0){
       const b=document.createElement('button');
-      b.className='btn ghost small';
+      b.className='btn small';
       if(s.type==='open'){b.textContent='+ AI';b.onclick=()=>{room.seats[i]={type:'ai',name:BOT_NAMES[(i-1)%3]};sfx.click();sendRoom();renderLobby();};}
       else if(s.type==='ai'){b.textContent='비우기';b.onclick=()=>{room.seats[i]={type:'open'};sfx.click();sendRoom();renderLobby();};}
       if(s.type!=='human')el.appendChild(b);
@@ -753,7 +750,7 @@ function renderLobby(){
   $('#btnStart').disabled=!net.isHost||!full;
   $('#btnStart').style.display=net.isHost?'':'none';
   $('#lobbyHint').innerHTML=net.isHost
-    ?(full?'모든 자리가 찼습니다. <b>게임 시작!</b>':'친구에게 코드를 공유하거나, 빈 자리를 <b>AI로 채우세요</b>')
+    ?(full?'모든 자리가 찼습니다. <b>게임 시작</b>을 누르세요':'친구에게 코드를 공유하거나, 빈 자리를 <b>AI로 채우세요</b>')
     :'호스트가 게임을 시작하길 기다리는 중...';
 }
 function startGame(){
@@ -774,8 +771,8 @@ function backToMenu(){
 }
 
 /* ---------------- 버튼 바인딩 ---------------- */
-$('#inName').value=localStorage.getItem('akg_name')||'';
-$('#inName').addEventListener('input',()=>localStorage.setItem('akg_name',$('#inName').value));
+try{$('#inName').value=localStorage.getItem('akg_name')||'';}catch(e){}
+$('#inName').addEventListener('input',()=>{try{localStorage.setItem('akg_name',$('#inName').value);}catch(e){}});
 $('#btnSolo').onclick=()=>{
   sfx.click();net.mode='local';net.isHost=true;net.mySeat=0;
   room.seats=[{type:'human',name:myName()},{type:'ai',name:BOT_NAMES[0]},{type:'ai',name:BOT_NAMES[1]},{type:'ai',name:BOT_NAMES[2]}];
